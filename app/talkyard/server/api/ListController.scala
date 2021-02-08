@@ -38,7 +38,7 @@ class ListController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
 
   def listThingsPubApi(): Action[JsValue] = PostJsonAction(  // [PUB_API]
-          RateLimits.ReadsFromDb, maxBytes = 200) { request: JsonPostRequest =>
+          RateLimits.ReadsFromDb, maxBytes = 2000) { request: JsonPostRequest =>
     listThingsPubApiImpl(request)
   }
 
@@ -80,18 +80,18 @@ class ListController @Inject()(cc: ControllerComponents, edContext: EdContext)
       }
     }
 
-    val catOrRootCat = anyCategory getOrElse {
-      val rootCats = dao.getRootCategories()
-      throwUnimplementedIf(rootCats.length >= 2, "TyE0450WKTD")  // [subcats]
-      rootCats.headOption getOrElse {
-        return nothingFound
-      }
-    }
-
     val authzCtx = dao.getForumAuthzContext(requester)
 
     findWhat match {
       case Pages =>
+        val catOrRootCat = anyCategory getOrElse {
+          val rootCats = dao.getRootCategories()
+          throwUnimplementedIf(rootCats.length >= 2, "TyE0450WKTD")  // [subcats]
+          rootCats.headOption getOrElse {
+            return nothingFound
+          }
+        }
+
         val pageQuery = PageQuery(
               // Score and bump time, if nothing else specified. [TyT025WKRGJ]
               PageOrderOffset.ByScoreAndBumpTime(offset = None, TopTopicsPeriod.Week),

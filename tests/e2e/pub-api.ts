@@ -24,11 +24,26 @@ interface ListUsersApiResponse {
 
 type ApiResponse<R> = ApiErrorResponse | R;
 
-type ApiErrorResponse = { error: any; };
+interface ApiErrorResponse {
+  error: ApiFailInfo;
+}
+
+interface ApiFailInfo {
+  httpStatusCode?: Nr;
+  tyFailCode?: St;
+  tyFailMsg?: St;
+};
+
+interface ErrCodeMsg {
+  errCode?: St;
+  errMsg?: St;
+}
+
 
 type ParticipantId = string;
 
 type MemberRef = string;
+type PageRef = string;
 type CategoryRef = string;
 type TagRef = string;
 type BadgeRef = string;
@@ -116,6 +131,7 @@ interface LookWhere {
   emailAddresses?: boolean;
 
   // Find members in these groups.
+  // E.g.  { inGroups: ['username:some_group', 'patid:223344'] }   or 'groupid:...'  ?
   inGroups?: MemberRef[];
 
   // Find members with these badges.
@@ -140,7 +156,12 @@ interface LookWhere {
   // If you want to search only, say, pages of type Article and Question.
   pageTypes?: PageType[];
 
+  // List posts or participants in these pages.
+  // E.g.  { inPages: 'pageid:112233' }  ?
+  inPages?: PageRef[];
+
   // Find pages in these categories.
+  // E.g.  { inCategories: 'catid:112233' }  ?
   inCategories?: CategoryRef[];
 
   // Pages with these tags.
@@ -154,8 +175,11 @@ interface LookWhere {
 // What you get back
 // -------------------------
 
-type ThingFound = PageFound | PageListed | PostListed
-                  | ParticipantFound | TagFound | CategoryFound;
+type ThingFound = PageOptFields
+                | PageFound
+                | PageListed  // hmm, incl in  PageOptFields  above
+                | PostListed
+                | ParticipantFound | TagFound | CategoryFound;
 
 
 
@@ -189,8 +213,20 @@ interface GroupFound extends MemberFound {
 }
 
 
+interface PageOptFields {
+  pageId?: PageId;
+  title?: St;
+  // Prefix with the origin (included in the response) to get the full URL.
+  urlPath?: St;
+  excerpt?: St;
+  author?: ParticipantFound;
+  categoriesMainFirst?: CategoryFound[];
+  numRepliesVisible?: Nr;
+}
 
-interface PageFoundOrListed {
+
+// Rename to PageDefFields ?
+interface PageFoundOrListed extends PageOptFields {
   pageId: PageId;
   title: string;
   // Prefix with the origin (included in the response) to get the full URL.
@@ -247,6 +283,143 @@ interface CategoryFound {
 
 
 
+// Batch shearch/list/get requests?
+// -------------------------
+
+// Good to see in the URL what types of queries are in the batch reques
+// (search and/or list and/or get), so any performance problems get simpler
+// to understand (where they happen).
+//
+// But! Should Not implement this, unless clearly needed.
+// Still, goot to think about in advance, so as not to paint oneself into a corner?
+//
+// I think this is similar to GraphQL? But, look in decisions.adoc
+// (about avoiding GraphQL the nearest time).
+//
+//   /-/v0/batch(-search)?(-list)?(-get)?  {
+//     batchQueries: [
+//       getQuery: {
+//         getPages: [
+//           'emburl:https://blog/a-blog-post':
+//           'emburl:https://blog/another',
+//           'emburl:https://blog/a-third',
+//           // This'll never happen — just theoretically, could allow this too:
+//           { pageRef: 'emburl:https://blog/a-third',
+//             inclFields: ...,      // or,
+//             inclMoreFields: ...,  // or,
+//             exclFields: ... }     //
+//         ],
+//         inclFields: {
+//           numRepliesVisible: true,
+//           numOrigPostLikeVotes: true,
+//         },
+//       },
+//       getQuery: {
+//         getPages: [
+//           ...
+//         ],
+//         inclFields: {
+//           someOtherField: true,
+//         },
+//       },
+//       listQuery: {
+//         exactPrefix: 'jane_d',
+//         findWhat: 'Members',
+//         lookWhere: { usernames: true },
+//       },
+//       listQuery: {
+//         findWhat: 'Pages',
+//         lookWhere: { inCategories: [catB, catC] },
+//       },
+//       searchQuery: {
+//         freetext: "how to feed an anteater who has climbed a tall tree",
+//       },
+//     ],
+//   }
+//
+// Response could be:
+//
+//   {
+//     origin: "https://example.com",
+//     batchQueriesResults: [
+//       { getResults: ... },
+//       { getResults: ... },
+//       { listResults: ... },
+//       { listResults: ... },
+//       { searchResults: ... },
+//     ],
+//   }
+//
+
+
+
+// A  Get Query request
+// -------------------------
+
+// When you know precisely what you want, you can use a Get Query, to look up
+// directly by id / url / username / something. For each lookup key you specify,
+// you'll get back exactly one thing, or null.
+//
+// But if you don't know the exact ids / something, e.g. you have a username
+// *prefix* only, then you can use a List Query instead, to list all participants
+// with matching usernames — now, you might get back 0, 1 or many matching things.
+//
+// Tech details: Looks up by database primary key. So you know you'll get 1 or 0.
+// That's why the getWhat and ids (e.g. `getPages: [page-id-one, two, three]`)
+// are one single same key-value. — Compare with ListQuery, which has two separate
+// fields: findWhat: ... and lookWhere: .... E.g. findWhat: 'Posts' and
+// lookWhere: category-ids, to find recent posts in those categories.
+//
+interface GetQueryApiRequest {
+  getQuery: GetPagesQuery;
+  pretty?: Bo;
+}
+
+interface GetPagesQuery {
+  getPages: PageRef[];
+  inclFields: { numRepliesVisible: true };
+}
+
+type GetQueryApiResponse<T extends ThingFound> = ApiResponse<GetQueryResults<T>>;
+
+interface GetQueryResults<T extends ThingFound> {
+  origin: St;
+
+  // One list item for each getPages[] list item.
+  thingsOrErrs: (T | ErrCodeMsg | null)[];
+}
+
+// Examples:
+//
+// Get blog post comment counts:
+//
+//  /-/v0/get {
+//    getQuery: {
+//      getPages: [
+//        'emburl:https://blog/a-blog-post',
+//        'emburl:https://blog/another',
+//        'emburl:https://blog/a-third',
+//      ],
+//      inclFields: {
+//        numRepliesVisible: true,
+//      },
+//    }
+//  }
+//
+// Response ex, assuming /a-blog-post  couldn't be found:
+//
+//   {
+//     origin: "https://example.com",
+//     thingsFoundNullIfMissing: [
+//       null,
+//       { numRepliesVisible: 12 },
+//       { numRepliesVisible: 34 },
+//     ],
+//   }
+//
+
+
+
 // A  List Query request
 // -------------------------
 
@@ -254,6 +427,10 @@ interface CategoryFound {
 // List Queries are comparatively fast — they lookup things directly, via indexes in
 // the PostgreSQL database.  However they cannot do full text search — for that,
 // you need a Search Query.
+//
+// Tech details: Looks up by database index typically other than the primary key index.
+// The index might be on table B, although you're finding things in table A.
+// E.g. you might list the most recent posts (topics and replies) in a category.
 //
 interface ListQueryApiRequest {
   // Either:
@@ -307,12 +484,20 @@ type ListResultsScrollCursor = Unimplemented;
 //    sortOrder: 'PopularFirst',
 //    limit: 5,
 //  }
+//
+// Response ex:
+//
+//   { origin: "https://example.com", thingsFound: [...]  }
+//
 
 
 
 // A  Search Query request
 // -------------------------
 
+// Finds things via the full text search / faceted serarch database —
+// that is, ElasticSearch (currently), not PostgreSQL.
+//
 
 interface SearchQueryApiRequest {
   // Either:
@@ -368,6 +553,11 @@ type SearchResultsScrollCursor = Unimplemented;
 //      lookWhere: { pageText: true }. // the default, when finding pages
 //    }
 //  }
+//
+// Response ex:
+//
+//   { origin: "https://example.com", thingsFound: [...]  }
+//
 //
 // Find a user:
 //

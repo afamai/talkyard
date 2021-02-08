@@ -210,9 +210,10 @@ package object core {
     case class SingleSignOnId(value: String) extends ParsedRef(true)
     case class TalkyardId(value: String) extends ParsedRef
     case class Username(value: String) extends ParsedRef(true)
+    case class EmbeddingUrl(url: St) extends ParsedRef
   }
 
-  def parseRef(ref: Ref, allowParticipantRef: Boolean): ParsedRef Or ErrorMessage = {
+  def parseRef(ref: Ref, allowParticipantRef: Boolean): ParsedRef Or ErrMsg = {
     val returnBadIfDisallowParticipant = () =>
       if (!allowParticipantRef)
         return Bad("Refs to participants not allowed here, got: " + ref)
@@ -240,6 +241,14 @@ package object core {
       val username = ref drop "username:".length
       returnBadIfContainsAt(username)
       Good(ParsedRef.Username(username))
+    }
+    else if (ref startsWith "diid:") {
+      val discId = ref drop "diid:".length
+      Good(ParsedRef.EmbeddingUrl(discId))
+    }
+    else if (ref startsWith "emburl:") {
+      val url = ref drop "emburl:".length
+      Good(ParsedRef.EmbeddingUrl(url))
     }
     else {
       var refDots = ref.takeWhile(_ != ':') take 14

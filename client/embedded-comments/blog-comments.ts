@@ -19,6 +19,9 @@
  // then show error, mention needs to upd  Allow embedding from:  ____
  // — how know if not loaded? Set timeout, wait for iframe-inited messge.
 
+/// <reference path="comments-count.ts" />
+
+
 declare const debiki: any | undefined;
 declare const Bliss: any | undefined;
 declare function smoothScroll(elem: Element, x: number, y: number,
@@ -107,6 +110,9 @@ const insecureSomethingErrMsg = insecureTyIframeProbl ? (
 if (insecureSomethingErrMsg) {
   debugLog(insecureSomethingErrMsg);
 }
+
+
+tyns.fetchAndFillInCommentCounts(serverOrigin);
 
 
 var oneTimeLoginSecret;
@@ -244,7 +250,7 @@ function loadCommentsCreateEditor() {
   commentsIframe = Bliss.create('iframe', {
     id: 'ed-embedded-comments',
     name: 'edComments',
-    className: 'p_CmtsIfr',
+    className: 'p_CmtsIfr',   // hmm, instead, ty_CmtsIfr  ?
     // A title attr, for better accessibility. See: https://www.w3.org/TR/WCAG20-TECHS/H64.html
     title: discussionTitle || "Comments",
     src: commentsIframeUrl,

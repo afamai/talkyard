@@ -599,6 +599,7 @@ function runAllE2eTests {
   $r s/wdio       --only embedded-comments-restore-overwrite-site-same-domain.2browsers $args
   $r s/wdio       --only embedded-comments-restore-overwrite-site-new-domain.2browsers $args
 
+  $r s/wdio       --only embcom.comment-counts.2br.cors $args
 
   if [ -n "$http_server_pid" ]; then
     kill $http_server_pid
