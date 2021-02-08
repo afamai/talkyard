@@ -12,6 +12,8 @@
 // client (located in <root>/client/) cannot access it.
 
 
+/// <reference path="./../../client/types-and-const-enums.ts" />
+
 // Old, deprecated?
 interface ListUsersApiResponse {
   // RENAME to thingsFound?
@@ -283,76 +285,6 @@ interface CategoryFound {
 
 
 
-// Batch shearch/list/get requests?
-// -------------------------
-
-// Good to see in the URL what types of queries are in the batch reques
-// (search and/or list and/or get), so any performance problems get simpler
-// to understand (where they happen).
-//
-// But! Should Not implement this, unless clearly needed.
-// Still, goot to think about in advance, so as not to paint oneself into a corner?
-//
-// I think this is similar to GraphQL? But, look in decisions.adoc
-// (about avoiding GraphQL the nearest time).
-//
-//   /-/v0/batch(-search)?(-list)?(-get)?  {
-//     batchQueries: [
-//       getQuery: {
-//         getPages: [
-//           'emburl:https://blog/a-blog-post':
-//           'emburl:https://blog/another',
-//           'emburl:https://blog/a-third',
-//           // This'll never happen — just theoretically, could allow this too:
-//           { pageRef: 'emburl:https://blog/a-third',
-//             inclFields: ...,      // or,
-//             inclMoreFields: ...,  // or,
-//             exclFields: ... }     //
-//         ],
-//         inclFields: {
-//           numRepliesVisible: true,
-//           numOrigPostLikeVotes: true,
-//         },
-//       },
-//       getQuery: {
-//         getPages: [
-//           ...
-//         ],
-//         inclFields: {
-//           someOtherField: true,
-//         },
-//       },
-//       listQuery: {
-//         exactPrefix: 'jane_d',
-//         findWhat: 'Members',
-//         lookWhere: { usernames: true },
-//       },
-//       listQuery: {
-//         findWhat: 'Pages',
-//         lookWhere: { inCategories: [catB, catC] },
-//       },
-//       searchQuery: {
-//         freetext: "how to feed an anteater who has climbed a tall tree",
-//       },
-//     ],
-//   }
-//
-// Response could be:
-//
-//   {
-//     origin: "https://example.com",
-//     batchQueriesResults: [
-//       { getResults: ... },
-//       { getResults: ... },
-//       { listResults: ... },
-//       { listResults: ... },
-//       { searchResults: ... },
-//     ],
-//   }
-//
-
-
-
 // A  Get Query request
 // -------------------------
 
@@ -606,6 +538,70 @@ type SearchResultsScrollCursor = Unimplemented;
 //      lookWhere: { pageText: true, writtenBy: 'username:jane_doe' },
 //    }
 //  }
+//
+
+
+
+// Batch shearch/list/get requests?
+// -------------------------
+
+// Should Not implement this, unless clearly needed.
+// Still, goot to think about in advance, so as not to paint oneself into a corner?
+//
+// I think this is similar to GraphQL? But, look in decisions.adoc
+// (about avoiding GraphQL the nearest time).
+//
+//   /-/v0/batch(-search)?(-list)?(-get)?  {
+//     batchQueries: [
+//       getQuery: {
+//         getPages: [
+//           'emburl:https://blog/a-blog-post':
+//           'emburl:https://blog/another',
+//           'emburl:https://blog/a-third',
+//           // This'll never happen — just theoretically, could allow this too:
+//           { pageRef: 'emburl:https://blog/a-fourth',
+//             inclFields: ...,      // or,
+//             inclMoreFields: ...,  // or,
+//             exclFields: ... }     //
+//         ],
+//         inclFields: {
+//           numRepliesVisible: true,
+//           numOrigPostLikeVotes: true,
+//         },
+//       },
+//       getQuery: {
+//         getPages: [ ... ],
+//         inclFields: {
+//           someOtherField: true,
+//         },
+//       },
+//       listQuery: {
+//         exactPrefix: 'jane_d',
+//         findWhat: 'Members',
+//         lookWhere: { usernames: true },
+//       },
+//       listQuery: {
+//         findWhat: 'Pages',
+//         lookWhere: { inCategories: [catB, catC] },
+//       },
+//       searchQuery: {
+//         freetext: "how to feed an anteater that has climbed a tall tree",
+//       },
+//     ],
+//   }
+//
+// Response could be:
+//
+//   {
+//     origin: "https://example.com",
+//     batchQueriesResults: [
+//       { getResults: ... },
+//       { getResults: ... },
+//       { listResults: ... },
+//       { listResults: ... },
+//       { searchResults: ... },
+//     ],
+//   }
 //
 
 
